@@ -35,25 +35,25 @@ public class PortsAndAdaptersArchitectureTest {
         JavaClasses importedClasses = new ClassFileImporter().importPackages("org.ps.hexagon");
         LayeredArchitecture portsAndAdaptersLayers = layeredArchitecture()
                 .consideringOnlyDependenciesInLayers()
-                // Define each "layer" by its package
+                // Define each “layer” by its package
                 .layer("Adapters").definedBy("..adapters..")
                 .layer("Application").definedBy("..application..")
                 .layer("Config").definedBy("..config..")
                 .layer("Domain").definedBy("..domain..")
                 .layer("Infrastructure").definedBy("..infrastructure..")
-                // Domain may not access any layer but can be access by Application and Adapters layers
+                // Domain may not access any layer but can be access by Application and Adapters layers.
                 .whereLayer("Domain").mayNotAccessAnyLayer()
                 .whereLayer("Domain").mayOnlyBeAccessedByLayers("Application", "Adapters")
-                // Application may access the Config and Domain layers but can by access by Adapters layer
+                // Application may access the Config and Domain layers but can be access by Adapters layer.
                 .whereLayer("Application").mayOnlyAccessLayers("Config", "Domain")
                 .whereLayer("Application").mayOnlyBeAccessedByLayers("Adapters")
-                // Adapters may access Application, Adapters, Domain and Infrastructure by cannot be access by other layers
+                // Adapters may access Application, Adapters, Domain and Infrastructure but cannot be access by other layers.
                 .whereLayer("Adapters").mayOnlyAccessLayers("Infrastructure", "Config", "Application", "Domain")
                 .whereLayer("Adapters").mayNotBeAccessedByAnyLayer()
-                // Infrastructure can only access Config layer but can be access only by Adapters
+                // Infrastructure can only access Config layer but can be access only by Adapters.
                 .whereLayer("Infrastructure").mayOnlyAccessLayers("Config")
                 .whereLayer("Infrastructure").mayOnlyBeAccessedByLayers("Adapters")
-                // Config may not be access any layer but can be access by Application, Adapters, Domain and Infrastructure
+                // Config may not be access any layer but can be access by Application, Adapters, Domain and Infrastructure.
                 .whereLayer("Config").mayNotAccessAnyLayer()
                 .whereLayer("Config").mayOnlyBeAccessedByLayers("Application", "Adapters", "Domain", "Infrastructure");
 
