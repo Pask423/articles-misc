@@ -27,14 +27,15 @@ class OverallArchitectureJUnitTest {
      */
     @Test
     void testClassesInXShouldOnlyDependOnClassesInY() {
-        // Given
+        // Given: Define a rule that restricts classes in package '..x..'
+        // to depend only on classes in '..y..' or standard Java packages.
         ArchRule rule = classes()
-            .that().resideInAPackage("..x..")
-            .should().onlyDependOnClassesThat()
-            .resideInAnyPackage(
-                "..y..",
-                "java.."
-            );
+                .that().resideInAPackage("..x..")
+                .should().onlyDependOnClassesThat()
+                .resideInAnyPackage(
+                        "..y..",   // Allow dependency on package '..y..'
+                        "java.."   // Allow dependency on Java standard library
+                );
 
         // Then
         rule.check(IMPORTED_CLASSES);
@@ -45,11 +46,12 @@ class OverallArchitectureJUnitTest {
      */
     @Test
     void testServiceLayerShouldNotAccessControllers() {
-        // Given
+        // Given: Define a rule that prevents the service layer
+        // from depending on classes in the controller layer.
         ArchRule rule = noClasses()
-            .that().resideInAPackage("..service..")
-            .should().dependOnClassesThat()
-            .resideInAPackage("..controller..");
+                .that().resideInAPackage("..service..")
+                .should().dependOnClassesThat()
+                .resideInAPackage("..controller..");
 
         // Then
         rule.check(IMPORTED_CLASSES);
@@ -57,15 +59,16 @@ class OverallArchitectureJUnitTest {
 
     /**
      * 3) No cyclic dependencies should exist among these packages.
-     *    This example checks for cycles in sub-packages under "org.ps".
+     * This example checks for cycles in sub-packages under "org.ps".
      */
     @Test
     void testNoCyclicDependencies() {
-        // Given
+        // Given: Define a rule to ensure there are no cyclic dependencies
+        // between modules grouped by their first-level sub-packages under 'org.ps'.
         ArchRule rule = SlicesRuleDefinition.slices()
-            .matching("org.ps.(*)..")
-            .should()
-            .beFreeOfCycles();
+                .matching("org.ps.(*)..")  // Define slices by sub-packages under 'org.ps'
+                .should()
+                .beFreeOfCycles();         // Ensure there's no cyclic dependency between them
 
         // Then
         rule.check(IMPORTED_CLASSES);
@@ -76,17 +79,18 @@ class OverallArchitectureJUnitTest {
      */
     @Test
     void testNoFieldInjection() {
-        // Given
+        // Given: Define a rule that disallows field injection using @Autowired.
         ArchRule noFieldInjectionRule = noFields()
-            .should().beAnnotatedWith(Autowired.class)
-            .because("Use constructor injection instead of field injection.");
+                .should().beAnnotatedWith(Autowired.class)
+                .because("Use constructor injection instead of field injection.");
 
+        // Also define a rule that disallows setter injection using @Autowired.
         ArchRule noSetterInjectionRule = noMethods()
-            .that().haveNameMatching("set[A-Z].*")
-            .should().beAnnotatedWith(Autowired.class)
-            .because("Use constructor injection instead of setter injection.");
+                .that().haveNameMatching("set[A-Z].*")
+                .should().beAnnotatedWith(Autowired.class)
+                .because("Use constructor injection instead of setter injection.");
 
-        // When
+        // When: Combine both rules into one composite rule.
         ArchRule compositeRule = CompositeArchRule.of(noFieldInjectionRule).and(noSetterInjectionRule);
 
         // Then
@@ -95,22 +99,25 @@ class OverallArchitectureJUnitTest {
 
     /**
      * 5) Ensure @Transactional annotation is only used in the service layer.
-     *    (Check both class-level and method-level usage.)
+     * (Check both class-level and method-level usage.)
      */
     @Test
     void testTransactionalAnnotationOnlyInService() {
-        // Given
+        // Given: Define a rule that ensures classes annotated with @Transactional
+        // are located in the service layer.
         ArchRule classLevelTransactional = classes()
-            .that().areAnnotatedWith(Transactional.class)
-            .should().resideInAPackage("..service..")
-            .because("Class-level @Transactional belongs in the service layer only.");
+                .that().areAnnotatedWith(Transactional.class)
+                .should().resideInAPackage("..service..")
+                .because("Class-level @Transactional belongs in the service layer only.");
 
+        // Also define a rule for methods annotated with @Transactional
+        // to be declared only in service layer classes.
         ArchRule methodLevelTransactional = methods()
-            .that().areAnnotatedWith(Transactional.class)
-            .should().beDeclaredInClassesThat().resideInAPackage("..service..")
-            .because("Method-level @Transactional belongs in the service layer only.");
+                .that().areAnnotatedWith(Transactional.class)
+                .should().beDeclaredInClassesThat().resideInAPackage("..service..")
+                .because("Method-level @Transactional belongs in the service layer only.");
 
-        // When
+        // When: Combine both rules into one composite rule.
         ArchRule compositeRule = CompositeArchRule.of(classLevelTransactional).and(methodLevelTransactional);
 
         // Then
@@ -119,15 +126,16 @@ class OverallArchitectureJUnitTest {
 
     /**
      * 6) Enforce @Repository and @Service annotation usage in specific packages:
-     *    - @Repository only in ..repository..
-     *    - @Service only in ..service..
+     * - @Repository only in ..repository..
+     * - @Service only in ..service..
      */
     @Test
     void testRepositoryAnnotationInRepositoryPackage() {
-        // Given
+        // Given: Define a rule that ensures @Repository-annotated classes
+        // are only located in the repository package.
         ArchRule rule = classes()
-            .that().areAnnotatedWith(Repository.class)
-            .should().resideInAPackage("..repository..");
+                .that().areAnnotatedWith(Repository.class)
+                .should().resideInAPackage("..repository..");
 
         // Then
         rule.check(IMPORTED_CLASSES);
@@ -135,10 +143,11 @@ class OverallArchitectureJUnitTest {
 
     @Test
     void testServiceAnnotationInServicePackage() {
-        // Given
+        // Given: Define a rule that ensures @Service-annotated classes
+        // are only located in the service package.
         ArchRule rule = classes()
-            .that().areAnnotatedWith(Service.class)
-            .should().resideInAPackage("..service..");
+                .that().areAnnotatedWith(Service.class)
+                .should().resideInAPackage("..service..");
 
         // Then
         rule.check(IMPORTED_CLASSES);
