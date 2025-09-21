@@ -6,15 +6,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 class KafkaConfig {
 
-
     @Bean
     Buffer buffer() {
-        return new DeafultBuffer();
+        return new Buffer();
+    }
+
+    @Bean
+    Consumer consumer(Buffer buffer) {
+        return new Consumer(buffer);
     }
 
     @Bean
     Hub hub(Buffer buffer) {
         return new Hub(buffer);
     }
-
 }

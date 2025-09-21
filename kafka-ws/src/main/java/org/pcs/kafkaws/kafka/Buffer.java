@@ -4,19 +4,19 @@ import org.pcs.kafkaws.model.Message;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
-public class Buffer {
+class Buffer {
 
-    private final Sinks.Many<Message> flux;
+    private final Sinks.Many<Message> buffer;
 
     Buffer() {
-        this.flux = Sinks.many().unicast().onBackpressureBuffer();
+        this.buffer = Sinks.many().unicast().onBackpressureBuffer();
     }
 
-    public void offer(Message message) {
-        flux.tryEmitNext(message);
+    void offer(Message message) {
+        buffer.emitNext(message, Sinks.EmitFailureHandler.FAIL_FAST);
     }
 
-    public Flux<Message> listen() {
-        return flux.asFlux();
+    Flux<Message> listen() {
+        return buffer.asFlux();
     }
 }

@@ -1,45 +1,44 @@
-package org.pcs.kafkaws;
+package org.pcs.kafkaws.kafka;
 
-import org.pcs.kafkaws.buffer.Buffer;
 import org.pcs.kafkaws.model.Message;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-
 public class Hub {
 
-    private final ConcurrentHashMap<String, Sinks.Many<Message>> subscribers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Sinks.Many<Message>> subscribers;
 
-    public Hub(Buffer buffer) {
+    Hub(Buffer buffer) {
+        this.subscribers = new ConcurrentHashMap<>();
         buffer.listen()
-                .doOnNext(message ->
-                        subscribers
-                                .computeIfAbsent(message.topic(), topic -> Sinks.many().multicast().onBackpressureBuffer())
-                                .tryEmitNext(message)
-                );
-
+                .subscribe(message -> {
+                    Sinks.Many<Message> messageMany = subscribers.get(message.topic());
+                    if (messageMany != null) {
+                        messageMany.emitNext(message, Sinks.EmitFailureHandler.FAIL_FAST);
+                    }
+                });
     }
 
     public Flux<Message> subscribe(String topic) {
-        if (subscribers.containsKey(topic)) {
-            return subscribers.get(topic).asFlux();
-        }
-        return Flux.empty();
+        return subscribers
+                .computeIfAbsent(topic, t -> Sinks.many().multicast().onBackpressureBuffer())
+                .asFlux();
     }
 
-    public int unsubscribe(String topic) {
-        Sinks.Many<Message> messageMany = subscribers.computeIfPresent(topic, (k, v) -> {
-            if (v.currentSubscriberCount() == 0) {
-                return null;
-            }
-            return v;
-        });
-        if (messageMany == null) {
+    public int subscribersCount(String topic) {
+        Sinks.Many<Message> topicTracker = subscribers.get(topic);
+        if (topicTracker == null) {
             return 0;
         }
-        return messageMany.currentSubscriberCount();
+        return topicTracker.currentSubscriberCount();
+    }
+
+    public void unsubscribe(String topic) {
+        subscribers.computeIfPresent(topic, (k, v) -> {
+            v.emitComplete(Sinks.EmitFailureHandler.FAIL_FAST);
+            return null;
+        });
     }
 }
-
